@@ -22,8 +22,9 @@ class Player {
 };
 
 // Declarem dades globals de la consulta
-int nDef, nMig, nDav;
+int nDef, nMig, nDav, sp;
 int maxTotalPrice, maxIndivPrice, nTotalPlayersDataset; 
+int actual_max_points;
 
 vector<Player> id2player;
 vector<Player> pors;
@@ -64,42 +65,55 @@ void write_solution(const vector<string>& selected_players, const string& output
 }
 
 
-void tactica_exh(const string& output, vector<string>& selected_players, int sum_points, int sum_price, int sp, int last_selected){
-    if (sp == 11) cout << sum_points << endl;
-    
+void tactica_exh(const string& output, vector<string>& selected_players, int sum_points, int sum_price, int last_selected){
+    if (sp == 11) {
+        if (sum_points > actual_max_points){
+            cout << sum_points << endl; 
+            actual_max_points = sum_points;
+        }
+            
+    }
+     
     //write_solution(selected_players, output, sum_points, sum_price);
 
     if (sp == 0){
-        for (int p = 0; p < pors.size();++p){              // busquem totes les possibles linies per tots els porters
-            selected_players[0] = pors[p].name;
-            tactica_exh(output, selected_players, sum_points+pors[p].points, sum_price+pors[p].price, 1, -1);
+        for (uint p = 0; p < pors.size();++p){              // busquem totes les possibles linies per tots els porters
+            selected_players[0] = pors[p].name; 
+            sp += 1;
+            tactica_exh(output, selected_players, sum_points+pors[p].points, sum_price+pors[p].price, -1);
+            sp -= 1;
         }
     }
     
     else if (sp > 0 && sp <= nDef){
-        for (int de = last_selected+1; de < defs.size(); ++de){
+        for (uint de = last_selected+1; de < defs.size(); ++de){
             if (defs[de].price + sum_price > maxTotalPrice) continue;
-            selected_players[sp] = defs[de].name;
-            tactica_exh(output, selected_players, sum_points+defs[de].points, sum_price+defs[de].price, sp+1, de);
+            selected_players[sp] = defs[de].name; 
+            sp += 1;
+            tactica_exh(output, selected_players, sum_points+defs[de].points, sum_price+defs[de].price, de);
+            sp -= 1;
         }
     }
 
     else if (sp > nDef && sp <= nDef+nMig){
         if (sp == nDef+1) last_selected = -1;
-        for (int m = last_selected+1; m < migs.size(); ++m){
+        for (uint m = last_selected+1; m < migs.size(); ++m){
             if (migs[m].price + sum_price > maxTotalPrice) continue;
-            selected_players[sp] = migs[m].name;
-            tactica_exh(output, selected_players, sum_points+migs[m].points, sum_price+migs[m].price, sp+1, m);
+            selected_players[sp] = migs[m].name; 
+            sp += 1;
+            tactica_exh(output, selected_players, sum_points+migs[m].points, sum_price+migs[m].price,  m);
+            sp -= 1;
         }
     }
     
-    else {
-        cout << "a" << endl;
+    else if (sp > nDef+nMig && sp < 11){
         if (sp == nDef+nMig+1) last_selected = -1;
-        for (int da = last_selected+1; da < davs.size(); ++da){
+        for (uint da = last_selected+1; da < davs.size(); ++da){
             if (davs[da].price + sum_price > maxTotalPrice) continue;
-            selected_players[sp] = davs[da].name;
-            tactica_exh(output, selected_players, sum_points+davs[da].points, sum_price+davs[da].price, sp+1, da);
+            selected_players[sp] = davs[da].name; 
+            sp += 1;
+            tactica_exh(output, selected_players, sum_points+davs[da].points, sum_price+davs[da].price, da);
+            sp -= 1;
         }
     }
 }
@@ -148,9 +162,13 @@ int main(int argc, char** argv) {
 
     // Crida la tactica de cerca exhaustiva
     selected_players = vector<string>(12);
+    cout << 'a' << nTotalPlayersDataset << endl;
+
+    actual_max_points = 0;
 
     ofstream fout(argv[3]);   
     fout << "a";
 
-    tactica_exh(argv[3], selected_players, 0, 0, 0, 0);
+    sp = 0; 
+    tactica_exh(argv[3], selected_players, 0, 0, 0);
 }
