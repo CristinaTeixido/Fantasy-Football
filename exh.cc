@@ -7,6 +7,14 @@
 
 using namespace std;
 
+#include <iomanip>
+
+int main() {
+    double numero = 123.45678;
+    std::cout << std::fixed << std::setprecision(1) << numero << std::endl;
+    return 0;
+}
+
 
 class Player {
     public:
