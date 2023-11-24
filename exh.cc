@@ -4,16 +4,9 @@
 #include <algorithm>
 #include <cassert>
 #include <string>
-
-using namespace std;
-
 #include <iomanip>
 
-int main() {
-    double numero = 123.45678;
-    std::cout << std::fixed << std::setprecision(1) << numero << std::endl;
-    return 0;
-}
+using namespace std;
 
 
 class Player {
@@ -32,7 +25,7 @@ class Player {
 // Declarem dades globals de la consulta
 int nDef, nMig, nDav, sp;
 int maxTotalPrice, maxIndivPrice, nTotalPlayersDataset; 
-int actual_max_points;
+int actual_max_points, t_start, t_end;
 
 vector<Player> id2player;
 vector<Player> pors;
@@ -43,30 +36,45 @@ vector<Player> davs;
 
 vector<string> selected_players;
 
-void write_solution(const vector<string>& selected_players, const string& output, int points, int price){
+void write_solution(vector<string>& selected_players, const string& output, int points, int price){
     ofstream fout(output);   
-    fout << "a" << endl;
 
     // Comprovem que el fitxer s'obre correctament
     if (!fout.is_open()) {
-        std::cerr << "No s'ha pogut obrir el fitxer de sortida correctament." << std::endl;
+        cout << "No s'ha pogut obrir el fitxer de sortida correctament." << endl;
         exit(1); 
     }
 
-    fout << "POR:" << selected_players[0] << endl;
-    fout << "DEF: ";
+    t_end = clock();
+    double time = (double(t_end-t_start)/CLOCKS_PER_SEC);
+    fout << fixed << setprecision(1) << time << endl;
 
-    for (int i = 1; i<=nDef; ++i) fout << selected_players[i] << ' ';
+    fout << "POR: " << selected_players[0] << endl;
+    
+    fout << "DEF: "; bool primer = true;
+    for (int i = 1; i < 11; ++i){
+        if (i == nDef +1){
+            fout << endl;
+            fout << "MIG: "; 
+            primer = true;
+            }
+
+        if (i == nDef+nMig+1){
+            fout << endl;
+            fout << "DAV: "; 
+            primer = true;
+            }
+        
+        if (primer) {
+            fout << selected_players[i]; 
+            primer = false;
+        }
+        else fout << ';' << selected_players[i];
+    }
+
     fout << endl;
-
-    fout << "MIG: ";
-    for (int i = nDef+1; i<=1+nDef+nMig; ++i) fout << selected_players[i] << ' ';
-
-    fout << "DAV: ";
-    for (int i = 2+nDef+nMig; i< 11; ++i) fout << selected_players[i] << ' ';
-
-    fout << "Punts:" << points << endl;
-    fout << "Preu:" << price << endl;
+    fout << "Punts: " << points << endl;
+    fout << "Preu: " << price << endl;
 
     fout.close();
 
@@ -76,13 +84,11 @@ void write_solution(const vector<string>& selected_players, const string& output
 void tactica_exh(const string& output, vector<string>& selected_players, int sum_points, int sum_price, int last_selected){
     if (sp == 11) {
         if (sum_points > actual_max_points){
-            cout << sum_points << endl; 
             actual_max_points = sum_points;
-        }
             
+            write_solution(selected_players, output, sum_points, sum_price);
+        }    
     }
-     
-    //write_solution(selected_players, output, sum_points, sum_price);
 
     if (sp == 0){
         for (uint p = 0; p < pors.size();++p){              // busquem totes les possibles linies per tots els porters
@@ -168,14 +174,13 @@ int main(int argc, char** argv) {
         else davs.push_back(p);
     }
 
+    // Inicialitzem el cronòmetre
+    t_start = clock();
+
     // Crida la tactica de cerca exhaustiva
     selected_players = vector<string>(12);
-    cout << 'a' << nTotalPlayersDataset << endl;
 
     actual_max_points = 0;
-
-    ofstream fout(argv[3]);   
-    fout << "a";
 
     sp = 0; 
     tactica_exh(argv[3], selected_players, 0, 0, 0);
