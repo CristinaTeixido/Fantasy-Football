@@ -9,7 +9,6 @@
 
 using namespace std;
 
-
 class Player {
     public:
     int    id;
@@ -39,12 +38,12 @@ vector<Player> davs;
 
 vector<string> selected_players;
 
- bool compare(const Player& a, const Player& b) {
+bool compare(const Player& a, const Player& b) {
         return a.efficiency > b.efficiency;
     }
 
 void write_solution(vector<string>& selected_players, const string& output, int points, int price){
-    ofstream fout(output);   
+    ofstream fout(output);
 
     // Comprovem que el fitxer s'obre correctament
     if (!fout.is_open()) {
@@ -54,7 +53,7 @@ void write_solution(vector<string>& selected_players, const string& output, int 
 
     t_end = clock();
     double time = (double(t_end-t_start)/CLOCKS_PER_SEC);
-    fout << fixed << setprecision(1) << time << endl;
+    fout << fixed << setprecision(7) << time << endl;
 
     fout << "POR: " << selected_players[0] << endl;
     
@@ -92,7 +91,6 @@ void tactica_exh(const string& output, vector<string>& selected_players, int sum
     if (sp == 11) {
         if (sum_points > actual_max_points){
             actual_max_points = sum_points;
-            
             write_solution(selected_players, output, sum_points, sum_price);
         }    
     }
@@ -165,7 +163,7 @@ int main(int argc, char** argv) {
         float efficiency;
         if (price!= 0) efficiency = p/log(price);
         else efficiency = 0;
-        cout << 'a' << p << ' '<< price << efficiency << endl;
+        
         id2player.push_back(Player(nextId++, name, position, price, club, p, efficiency));
     }
 
@@ -177,6 +175,13 @@ int main(int argc, char** argv) {
     consulta >> nDef >> nMig >> nDav >> maxTotalPrice >> maxIndivPrice;
     consulta.close();
 
+    // Ordenem la llista de jugadors segons la seva relació punts/preu
+    // (De major a menor)
+
+    
+    sort(id2player.begin(), id2player.end(), [](const Player& a, const Player& b){
+        return a.efficiency > b.efficiency;
+    });
 
     // Classifiquem tots els jugadors segona la seva posició
     for (Player& p: id2player){
@@ -189,16 +194,6 @@ int main(int argc, char** argv) {
         else davs.push_back(p);
     }
 
-    //ordenem les llistes segons l'eficiència de cada jugador
-
-    sort(pors.begin(), pors.end(), [](const Player& a, const Player& b){
-        return a.efficiency > b.efficiency;
-    });
-
-    for (Player&p: pors) {
-        cout << p.name << p.efficiency << endl;
-    }
-
     // Inicialitzem el cronòmetre
     t_start = clock();
 
@@ -208,5 +203,5 @@ int main(int argc, char** argv) {
     actual_max_points = 0;
 
     sp = 0; 
-    //tactica_exh(argv[3], selected_players, 0, 0, 0);
+    tactica_exh(argv[3], selected_players, 0, 0, 0);
 }
