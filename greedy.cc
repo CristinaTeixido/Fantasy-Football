@@ -50,7 +50,6 @@ void write_solution(const vector<string>& selected_players,
     t_end = clock();
     double time = (double(t_end-t_start)/CLOCKS_PER_SEC);
     fout << fixed << setprecision(1) << time << endl;
-    for (string nom : selected_players) cout << nom << endl;
 
     fout << "POR: " << selected_players[0] << endl;
     
