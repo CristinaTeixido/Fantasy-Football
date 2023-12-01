@@ -25,7 +25,7 @@ class Player {
 };
 
 // Declarem dades globals de la consulta
-int nDef, nMig, nDav, sp;
+int nDef, nMig, nDav;
 int maxTotalPrice, maxIndivPrice, nTotalPlayersDataset; 
 int actual_max_points, t_start, t_end;
 
@@ -84,20 +84,47 @@ void write_solution(const vector<string>& selected_players,
 }
 
 
-void tactica_greedy(const vector<Player>& players, vector<string>& selected_players, 
-                   int num, int& sum_points, int& sum_price){
-    for(uint p = 0; p < players.size(); p++){
-        if (num == 0) break;
-        else{
-            if(sum_price + players[p].price <= maxTotalPrice && players[p].points <= maxIndivPrice){
-                selected_players.push_back(players[p].name); 
-                sum_points += players[p].points;
-                sum_price += players[p].price;
-                num -= 1;
+void tactica_greedy(vector<string>& selected_players, int por, int def, int mig, int dav, string out){
+    int sum_points = 0;
+    int sum_price = 0;
+    bool afegir = false;
+    int k;
+    for(Player p : id2player){
+        if (por == 0 && def == 0 && mig == 0 && dav == 0) break;
+        if(sum_price + p.price <= maxTotalPrice && p.points <= maxIndivPrice){
+            if(p.position == "por" && por > 0){
+                afegir = true;
+                k = 0;
+                por -= 1;
+            }
+            if(p.position == "def" && def > 0){
+                afegir = true;
+                k = nDef - def + 1; 
+                def -= 1;
+            }
+            if(p.position == "mig" && mig > 0){
+                afegir = true;
+                k = nMig - mig + nDef + 1; 
+                mig -= 1;
+            }
+            if(p.position == "dav" && dav > 0){
+                afegir = true;
+                k = 11 - dav; 
+                dav -= 1;
+            }
+            
+            if (afegir) {
+                selected_players[k] = p.name;
+                sum_points += p.points;
+                sum_price += p.price;
+                afegir = false;
             }
         }
     }
+    write_solution(selected_players, out, sum_points, sum_price);
+
 }
+
 
 
 int main(int argc, char** argv) {
@@ -143,30 +170,12 @@ int main(int argc, char** argv) {
         return a.efficiency > b.efficiency; 
     });
     
-    // Classifiquem tots els jugadors segona la seva posició
-    for (Player& p: id2player){
-        if (p.price > maxIndivPrice) continue;
-        if (p.points == 0 && p.price > 0) continue;
-        
-        if (p.position == "por") pors.push_back(p);
-        else if (p.position == "def") defs.push_back(p);
-        else if (p.position == "mig") migs.push_back(p);
-        else davs.push_back(p);
-    }
 
     // Inicialitzem el cronòmetre
     t_start = clock();
 
     // Crida la tactica de cerca exhaustiva
-    vector<string> selected_players;
+    vector<string> selected_players(11);
 
-    int actual_price = 0;
-    int actual_points = 0;
-
-    tactica_greedy(pors, selected_players, 1, actual_points, actual_price); //porters
-    tactica_greedy(defs, selected_players, nDef, actual_points, actual_price); //defenses
-    tactica_greedy(migs, selected_players, nMig, actual_points, actual_price); //migcampistes
-    tactica_greedy(davs, selected_players, nDav, actual_points, actual_price); //davanters
-
-    write_solution(selected_players, argv[3], actual_points, actual_price);
+    tactica_greedy(selected_players, 1, nDef, nMig, nDav, argv[3]); 
 }
