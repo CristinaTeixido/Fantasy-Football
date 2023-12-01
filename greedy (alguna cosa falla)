@@ -24,22 +24,26 @@ class Player {
         id(ident), name(n), position(pos), price(pr), club(c), points(p), efficiency(e){};
 };
 
+class Team {
+    public:
+    int members;
+    string keeper;
+    vector<string> defenses;
+    vector<string> midfielder;
+    vector<string> striker;
+    int points;
+    int price;
+}
+
 // Declarem dades globals de la consulta
 int nDef, nMig, nDav;
-int maxTotalPrice, maxIndivPrice, nTotalPlayersDataset; 
+int maxTotalPrice, maxIndivPrice; 
 int actual_max_points, t_start, t_end;
 
-vector<Player> id2player;
-vector<Player> pors;
-vector<Player> defs;
-vector<Player> migs;
-vector<Player> davs;
+vector<Player> players;
+Team selected_team;
 
-
-vector<string> selected_players;
-
-void write_solution(const vector<string>& selected_players, 
-                    const string& output, int points, int price){
+void write_solution(const string& output){
     ofstream fout(output);   
 
     // Comprovem que el fitxer s'obre correctament
@@ -52,76 +56,65 @@ void write_solution(const vector<string>& selected_players,
     double time = (double(t_end-t_start)/CLOCKS_PER_SEC);
     fout << fixed << setprecision(1) << time << endl;
 
-    fout << "POR: " << selected_players[0] << endl;
+    fout << "POR: " << selected_team.keeper << endl;
     
     fout << "DEF: "; bool primer = true;
-    for (int i = 1; i < 11; ++i){
-        if (i == nDef + 1){
-            fout << endl;
-            fout << "MIG: "; 
-            primer = true;
-            }
+    fout << selected_team.defenses[0]; 
+    for (int i = 1; i < nDef; ++i) fout << ';' << selected_team.defenses[i];
 
-        if (i == nDef+nMig+1){
-            fout << endl;
-            fout << "DAV: "; 
-            primer = true;
-            }
-        
-        if (primer) {
-            fout << selected_players[i]; 
-            primer = false;
-        }
-        else fout << ';' << selected_players[i];
-    }
+    fout << "MIG: "; bool primer = true;
+    fout << selected_team.defenses[0]; 
+    for (int i = 1; i < nDef; ++i) fout << ';' << selected_team.midfielder[i];
+
+    fout << "DAV: "; bool primer = true;
+    fout << selected_team.defenses[0]; 
+    for (int i = 1; i < nDef; ++i) fout << ';' << selected_team.striker[i];
 
     fout << endl;
-    fout << "Punts: " << points << endl;
-    fout << "Preu: " << price << endl;
+    fout << "Punts: " << selected_team.points << endl;
+    fout << "Preu: " << selected_team.price << endl;
 
     fout.close();
 
 }
 
 
-void tactica_greedy(vector<string>& selected_players, int por, int def, int mig, int dav, string out){
-    int sum_points = 0;
-    int sum_price = 0;
+void tactica_greedy(string out){
     bool afegir = false;
-    int k;
-    for(Player p : id2player){
-        if (por == 0 && def == 0 && mig == 0 && dav == 0) break;
-        if(sum_price + p.price <= maxTotalPrice && p.points <= maxIndivPrice){
-            if(p.position == "por" && por > 0){
+
+    for(Player p : players){
+        if (selected_team.members == 11) break;
+        if(selected_team.price + p.price <= maxTotalPrice && p.points <= maxIndivPrice){
+            if(p.position == "por" && selected_team.keeper.size() == 1) {         
+                selected_team.keeper.push_back(p.name);
                 afegir = true;
-                k = 0;
-                por -= 1;
             }
-            if(p.position == "def" && def > 0){
+                
+            
+            if(p.position == "def" && selected_team.defenses.size() == nDef){
+                selected_team.defenses.push_back(p.name);
                 afegir = true;
-                k = nDef - def + 1; 
-                def -= 1;
-            }
-            if(p.position == "mig" && mig > 0){
+            }   
+            
+            if(p.position == "mig" && selected_team.midfielder.size() == nDef){
+                selected_team.midfielder.push_back(p.name);
                 afegir = true;
-                k = nMig - mig + nDef + 1; 
-                mig -= 1;
-            }
-            if(p.position == "dav" && dav > 0){
-                afegir = true;
-                k = 11 - dav; 
-                dav -= 1;
             }
             
-            if (afegir) {
-                selected_players[k] = p.name;
-                sum_points += p.points;
-                sum_price += p.price;
+            if(p.position == "dav" && selected_team.striker.size() == nDef){
+                selected_team.striker.push_back(p.name);
+                afegir = true;
+            }
+
+            if (afegir){
+                selected_team.points += p.points;
+                selected_team.price += p.price;
+                selected_team.members += 1;
                 afegir = false;
             }
         }
     }
-    write_solution(selected_players, out, sum_points, sum_price);
+    write_solution(out);
 
 }
 
@@ -153,10 +146,9 @@ int main(int argc, char** argv) {
         if (price != 0) efficiency = p/log(price);
         else if (p != 0) efficiency = 20;
         else efficiency = 0;
-        id2player.push_back(Player(nextId++, name, position, price, club, p, efficiency));
+        players.push_back(Player(nextId++, name, position, price, club, p, efficiency));
     }
 
-    nTotalPlayersDataset = nextId;
     jugadors.close();
 
     // Llegeix fitxer_consulta
@@ -166,7 +158,7 @@ int main(int argc, char** argv) {
 
 
     // ordena els jugadors en ordre descendent respecte els punts
-    sort(id2player.begin(), id2player.end(), [](const Player& a, const Player& b) {
+    sort(players.begin(), players.end(), [](const Player& a, const Player& b) {
         return a.efficiency > b.efficiency; 
     });
     
@@ -174,8 +166,13 @@ int main(int argc, char** argv) {
     // Inicialitzem el cronòmetre
     t_start = clock();
 
-    // Crida la tactica de cerca exhaustiva
-    vector<string> selected_players(11);
+    // Inicialitzem equip
+    selected_team.members = 0;
+    selected_team.keeper = [];
+    selected_team.midfielder = [];
+    selected_team.striker = [];
+    selected_team.points = 0;
+    selected_team.price = 0;
 
-    tactica_greedy(selected_players, 1, nDef, nMig, nDav, argv[3]); 
+    tactica_greedy(argv[3]); 
 }
