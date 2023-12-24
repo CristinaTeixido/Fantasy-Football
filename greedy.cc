@@ -5,40 +5,107 @@
 #include <cassert>
 #include <string>
 #include <iomanip>
+#include <numeric> // Added to include accumulate
 #include <cmath>
 
 using namespace std;
 
-
 class Player {
     public:
-    int    id;
-    string name;
-    string position;
-    int    price;
-    string club;
-    int    points;
-   
-    Player(int ident, const string& n, const string& pos, int pr, const string& c, int p):
-        id(ident), name(n), position(pos), price(pr), club(c), points(p){};
+    string  name;
+    string  position;
+    int     price;
+    string  club;
+    int     points;
+    float   efficiency;
+
+    Player(const string& n, const string& pos, int pr, const string& c, int p, float e):
+        name(n), position(pos), price(pr), club(c), points(p), efficiency(e){};
+
+    bool operator==(const Player& b){
+        return (name == b.name);
+    }
+
+    bool operator!=(const Player& b){
+        return (name != b.name);
+    }
+
+    int position_num(){
+        if (position == "por") return 0;    
+        if (position == "def") return 1;
+        if (position == "mig") return 2;
+        else return 3;
+    }
+
+};
+
+class Team {
+    public:
+    int                     num_members;
+    vector<vector<Player>>  members;
+    int                     points;
+    int                     price;
+
+    Team():
+        num_members(0), members({{},{},{},{}}), points(0), price(0){};
+
+    Team(int n, vector<vector<Player>> m, int po, int pr):
+        num_members(n), members(m), points(po), price(pr){};
+    
+    bool operator==(const Team& b){
+        if (num_members != b.num_members || points != b.points || price != b.price || members[0][0].name != b.members[0][0].name) return false;
+        for (int i = 1; i<4; ++i){
+            for (uint j=0; j<members[i].size(); ++j){
+                if (members[i][j].name != b.members[i][j].name) return false;
+            }
+        }
+        return true;
+    }
+
+    void add_member(Player p, int g){
+        members[g].push_back(p);
+        price += p.price;
+        points += p.points;
+        num_members += 1;
+    }
+
+    void write(int t_start, string output){
+        ofstream fout(output);   
+        int t_end = clock();
+        double time = (double(t_end-t_start)/CLOCKS_PER_SEC);
+        fout << fixed << setprecision(1) << time << endl;
+
+        vector<string> positions = {"POR: ", "DEF: ", "MIG: ", "DAV: "};
+
+        for (int i = 0; i<4; ++i){
+            fout << positions[i] << members[i][0].name;
+            for (uint j=1; j <members[i].size(); ++j) fout << ';' << members[i][j].name;
+            fout << endl;
+        }
+        fout << "Punts: " << points << endl;
+        fout << "Preu: " << price << endl;
+    }
+    
+
 };
 
 // Declarem dades globals de la consulta
-int nDef, nMig, nDav, sp;
-int maxTotalPrice, maxIndivPrice, nTotalPlayersDataset; 
-int actual_max_points, t_start, t_end;
+int nDef, nMig, nDav;
+int maxTotalPrice, maxIndivPrice; 
+int actual_max_points, t_start;
+string output;
 
-vector<Player> id2player;
-vector<Player> pors;
-vector<Player> defs;
-vector<Player> migs;
-vector<Player> davs;
+vector<Player> players;
+vector<int> num_pl_position;
 
+bool accepted_player(Team& team, Player& pl, int g){
+    if (int(team.members[g].size()) == num_pl_position[g]) return false;
+    if (pl.price > maxIndivPrice) return false;
+    if (pl.price + team.price > maxTotalPrice) return false;
+    return true;
+}
 
-vector<string> selected_players;
-
-void write_solution(const vector<string>& selected_players, 
-                    const string& output, int points, int price){
+void write_solution(Team& selected_team){
     ofstream fout(output);   
 
     // Comprovem que el fitxer s'obre correctament
@@ -47,68 +114,37 @@ void write_solution(const vector<string>& selected_players,
         exit(1); 
     }
 
-    t_end = clock();
-    double time = (double(t_end-t_start)/CLOCKS_PER_SEC);
-    fout << fixed << setprecision(1) << time << endl;
-
-    fout << "POR: " << selected_players[0] << endl;
-    
-    fout << "DEF: "; bool primer = true;
-    for (int i = 1; i < 11; ++i){
-        if (i == nDef + 1){
-            fout << endl;
-            fout << "MIG: "; 
-            primer = true;
-            }
-
-        if (i == nDef+nMig+1){
-            fout << endl;
-            fout << "DAV: "; 
-            primer = true;
-            }
-        
-        if (primer) {
-            fout << selected_players[i]; 
-            primer = false;
-        }
-        else fout << ';' << selected_players[i];
-    }
-
-    fout << endl;
-    fout << "Punts: " << points << endl;
-    fout << "Preu: " << price << endl;
+    selected_team.write(t_start, output);
 
     fout.close();
 
 }
 
 
-void tactica_greedy(const vector<Player>& players, vector<string>& selected_players, 
-                   int num, int& sum_points, int& sum_price){
-    for(uint p = 0; p < players.size(); p++){
-        if (num == 0) break;
-        else{
-            if(sum_price + players[p].price <= maxTotalPrice && players[p].points <= maxIndivPrice){
-                selected_players.push_back(players[p].name); 
-                sum_points += players[p].points;
-                sum_price += players[p].price;
-                num -= 1;
-            }
+void tactica_greedy(Team& selected_team){
+    int pl = 0;
+    while(pl < int(players.size()) && selected_team.num_members < 11){
+        Player p = players[pl];
+
+        if(accepted_player(selected_team, p, p.position_num())) selected_team.add_member(p, p.position_num());
+        ++pl;
+
+        if (selected_team.num_members == 11){
+            write_solution(selected_team);
+            break;
         }
     }
+    
+    cout << "greedy terminated" << endl;
 }
 
+void add_player_list(vector<vector<Player>>& lists, Player p){
+    lists[p.position_num()].push_back(p);
+}
 
-int main(int argc, char** argv) {
-    // Comprova que l'entrada sigui correcta
-    if (argc != 4) {
-        cout << "Entrada incorrecta. Es necessiten 3 arguments: <fitxer_jugadors> <fitxer_consulta> <fitxer_sortida>" << endl;
-        exit(1);
-    }
-
+void read(int argc, char** argv){
     // Llegeix les dades dels jugadors
     ifstream jugadors(argv[1]);
-    int nextId = 0;
     while (!jugadors.eof()) {
         string name, club, position;
         int p;
@@ -120,47 +156,45 @@ int main(int argc, char** argv) {
         jugadors >> p;
         string aux2;
         getline(jugadors,aux2);
-        id2player.push_back(Player(nextId++, name, position, price, club, p));
+
+        float efficiency;
+        if (price != 0) efficiency = p/log(price);
+        else if (p != 0) efficiency = 20;
+        else efficiency = 0;
+
+        //Classifiquem els jugadors segons posició i separem els fakes
+        players.push_back(Player(name, position, price, club, p, efficiency));
     }
 
-    nTotalPlayersDataset = nextId;
     jugadors.close();
 
     // Llegeix fitxer_consulta
     ifstream consulta(argv[2]);
     consulta >> nDef >> nMig >> nDav >> maxTotalPrice >> maxIndivPrice;
     consulta.close();
+}
 
-
-    // ordena els jugadors en ordre descendent respecte els punts
-    sort(id2player.begin(), id2player.end(), [](const Player& a, const Player& b) {
-        return a.points > b.points; 
-    });
-    
-    // Classifiquem tots els jugadors segona la seva posició
-    for (Player& p: id2player){
-        if (p.price > maxIndivPrice) continue;
-        if (p.points == 0 && p.price > 0) continue;
-        
-        if (p.position == "por") pors.push_back(p);
-        else if (p.position == "def") defs.push_back(p);
-        else if (p.position == "mig") migs.push_back(p);
-        else davs.push_back(p);
+int main(int argc, char** argv) {
+    // Comprova que l'entrada sigui correcta
+    if (argc != 4) {
+        cout << "Entrada incorrecta. Es necessiten 3 arguments: <fitxer_jugadors> <fitxer_consulta> <fitxer_sortida>" << endl;
+        exit(1);
     }
+
+    read(argc, argv);
+
+    // ordena els jugadors en ordre descendent respecte els punts/preu
+    sort(players.begin(), players.end(), [](const Player& a, const Player& b) {
+        return a.efficiency > b.efficiency; 
+    });    
 
     // Inicialitzem el cronòmetre
     t_start = clock();
 
-    // Crida la tactica de cerca exhaustiva
-    vector<string> selected_players;
+    // Inicialitzem l'equip
+    Team selected_team = Team();
+    num_pl_position = {1, nDef, nMig, nDav};
+    output = argv[3];
 
-    int actual_price = 0;
-    int actual_points = 0;
-
-    tactica_greedy(pors, selected_players, 1, actual_points, actual_price); //porters
-    tactica_greedy(defs, selected_players, nDef, actual_points, actual_price); //defenses
-    tactica_greedy(migs, selected_players, nMig, actual_points, actual_price); //migcampistes
-    tactica_greedy(davs, selected_players, nDav, actual_points, actual_price); //davanters
-
-    write_solution(selected_players, argv[3], actual_points, actual_price);
+    tactica_greedy(selected_team); 
 }
