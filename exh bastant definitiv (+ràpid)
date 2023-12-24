@@ -8,7 +8,6 @@
 
 using namespace std;
 
-
 class Player {
     public:
     int    id;
@@ -20,6 +19,13 @@ class Player {
 
     Player(int ident, const string& n, const string& pos, int pr, const string& c, int p):
         id(ident), name(n), position(pos), price(pr), club(c), points(p){};
+
+    int position_num(){
+        if (position == "por") return 0;    
+        if (position == "def") return 1;
+        if (position == "mig") return 2;
+        else return 3;
+    }
 };
 
 class Team {
@@ -32,16 +38,36 @@ class Team {
     Team():
         num_members(0), members({{},{},{},{}}), points(0), price(0){};
 
+    void add_member(Player p, int g){
+        members[g].push_back(p);
+        price += p.price;
+        points += p.points;
+        num_members += 1;
+    }
+
+    void remove_member(Player p, int g){
+        members[g].pop_back();
+        price -= p.price;
+        points -= p.points;
+        num_members -= 1;
+    }
+
 };
 
 // Declarem dades globals de la consulta
 int nDef, nMig, nDav, sp;
 int maxTotalPrice, maxIndivPrice; 
-int actual_max_points, t_start, t_end;
+int actual_max_points, t_start;
 
 vector<Player> players;
+vector<int> num_pl_position;
 
-Team selected_team = Team();
+bool accepted_player(Team& team, Player& pl, int g){
+    if (int(team.members[g].size()) == num_pl_position[g]) return false;
+    if (pl.price > maxIndivPrice) return false;
+    if (pl.price + team.price > maxTotalPrice) return false;
+    return true;
+}
 
 void write_solution(Team& selected_team, const string& output){
     ofstream fout(output);   
@@ -52,12 +78,11 @@ void write_solution(Team& selected_team, const string& output){
         exit(1); 
     }
 
-    t_end = clock();
+    int t_end = clock();
     double time = (double(t_end-t_start)/CLOCKS_PER_SEC);
     fout << fixed << setprecision(1) << time << endl;
 
     vector<string> positions = {"POR: ", "DEF: ", "MIG: ", "DAV: "};
-
     for (int i = 0; i < 4; ++i){
         fout << positions[i] << selected_team.members[i][0].name;
         for (uint j = 1; j < selected_team.members[i].size(); ++j) fout << ';' << selected_team.members[i][j].name;
@@ -73,7 +98,9 @@ void write_solution(Team& selected_team, const string& output){
 
 
 void tactica_exh(const string& output, Team& selected_team, int id){
-    int pos = -1;
+    // Si ja hem explorat tots els jugadors acabem la cerca
+    if(id >= int(players.size())) return;
+
     Player p = players[id];
 
     // Si ja tenim 11 jugadors:
@@ -85,37 +112,16 @@ void tactica_exh(const string& output, Team& selected_team, int id){
         }
         return;
     }
-    
-    // Si ja hem explorat tots els jugadors acabem la cerca
-    if(id >= players.size()){
-        return;
-    } 
 
     // Si l'alineació que estem creant no excedeix el preu max de l'equip i tampoc cap jugador el preu individual:
-    if(selected_team.price + p.price <= maxTotalPrice && p.price <= maxIndivPrice){
-        // Segons la posició del jugador triem un índex per accedir a la llista de members
-        if(p.position == "por" && selected_team.members[0].size() == 0) pos = 0;    
-        else if (p.position == "def" && selected_team.members[1].size() < uint(nDef)) pos = 1;
-        else if (p.position == "mig" && selected_team.members[2].size() < uint(nMig)) pos = 2;
-        else if(p.position == "dav" && selected_team.members[3].size() < uint(nDav)) pos = 3;
-
+    if(accepted_player(selected_team, p, p.position_num())){
         // Si hem triat un jugador:
-        if (pos > -1){
-            // Actualitzem els punts, preu i el nombre de membres de l'equip
-            selected_team.points += p.points;
-            selected_team.price += p.price;
-            selected_team.num_members += 1;
-            selected_team.members[pos].push_back(p); // Afegim el jugador
-            
-            tactica_exh(output, selected_team, id+1); // Cridem la funció recurssiva
-
-            // Eliminem l'últim jugador actualitzant els paràmetres (per crear una nova combinació)
-            selected_team.points -= p.points;
-            selected_team.price -= p.price;
-            selected_team.num_members -= 1;
-            selected_team.members[pos].pop_back();
+        selected_team.add_member(p, p.position_num());
+        tactica_exh(output, selected_team, id+1); // Cridem la funció recurssiva
+        
+        // Eliminem l'últim jugador actualitzant els paràmetres (per crear una nova combinació)
+        selected_team.remove_member(p, p.position_num());
         }
-    }
 
     tactica_exh(output, selected_team, id+1);
 }
@@ -151,14 +157,18 @@ int main(int argc, char** argv) {
     consulta >> nDef >> nMig >> nDav >> maxTotalPrice >> maxIndivPrice;
     consulta.close();
 
+    num_pl_position = {1, nDef, nMig, nDav};
+
     // Inicialitzem el cronòmetre
     t_start = clock();
 
-    // Inicialitzem els actuals punts a 0
+    // Inicialitzem els actuals punts a 0 i el equip buit
     actual_max_points = 0;
+    Team selected_team = Team();
 
     // Cridem la cerca exhaustiva
     tactica_exh(argv[3], selected_team, 0);
+
     cout << "Exhaustive finished" << endl;
 
 }
