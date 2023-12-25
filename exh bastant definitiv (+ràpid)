@@ -20,13 +20,14 @@ class Player {
     Player(int ident, const string& n, const string& pos, int pr, const string& c, int p):
         id(ident), name(n), position(pos), price(pr), club(c), points(p){};
 
-    int position_num(){
+    int position_num(){ // Retorna 0, 1 o 2 segons la posició del jugador
         if (position == "por") return 0;    
         if (position == "def") return 1;
         if (position == "mig") return 2;
         else return 3;
     }
 };
+
 
 class Team {
     public:
@@ -38,6 +39,7 @@ class Team {
     Team():
         num_members(0), members({{},{},{},{}}), points(0), price(0){};
 
+    // Afageix un jugador a l'equip augmentant els punts, el preu i el nombre de membres
     void add_member(Player p, int g){
         members[g].push_back(p);
         price += p.price;
@@ -45,6 +47,7 @@ class Team {
         num_members += 1;
     }
 
+    // Elimina un jugador de l'equip disminuint els punts, el preu i el nombre de membres
     void remove_member(Player p, int g){
         members[g].pop_back();
         price -= p.price;
@@ -54,14 +57,37 @@ class Team {
 
 };
 
-// Declarem dades globals de la consulta
-int nDef, nMig, nDav, sp;
+
+// Declarem variables globals 
+int nDef, nMig, nDav;
 int maxTotalPrice, maxIndivPrice; 
 int actual_max_points, t_start;
-
 vector<Player> players;
 vector<int> num_pl_position;
+vector<int> max_points(4, 0);
 
+
+void max_punts_pos(Player& p){
+    if(p.points > max_points[p.position_num()]) max_points[p.position_num()] = p.points;
+}
+
+/* Per cada posició buida de l'equip que tenim fins ara sumem als punts de l'equip
+els punts del millor jugador d'aquella posició. 
+Retornarà false si la suma és inferior que el maxim de punts que tenim fins ara,
+sinó retornarà true*/
+
+bool future(Team& selected_team){
+    int points = selected_team.points;
+    points += (1 - selected_team.members[0].size()) * max_points[0] + 
+              (nDef - selected_team.members[1].size()) * max_points[1] +
+              (nMig - selected_team.members[2].size()) * max_points[2] +
+              (nDav - selected_team.members[3].size()) * max_points[3];
+    if(points <= actual_max_points) return false;
+    return true;
+}
+
+
+// Retrona true si pl es pot afegir a l'equip i les condicions de l'input es segueixen complint 
 bool accepted_player(Team& team, Player& pl, int g){
     if (int(team.members[g].size()) == num_pl_position[g]) return false;
     if (pl.price > maxIndivPrice) return false;
@@ -69,6 +95,7 @@ bool accepted_player(Team& team, Player& pl, int g){
     return true;
 }
 
+// Escriu la solució en el format correcte
 void write_solution(Team& selected_team, const string& output){
     ofstream fout(output);   
 
@@ -98,6 +125,8 @@ void write_solution(Team& selected_team, const string& output){
 
 
 void tactica_exh(const string& output, Team& selected_team, int id){
+    if(!future(selected_team)) return; // Si no té futur no continuem amb la cerca
+
     // Si ja hem explorat tots els jugadors acabem la cerca
     if(id >= int(players.size())) return;
 
@@ -107,20 +136,17 @@ void tactica_exh(const string& output, Team& selected_team, int id){
     if (selected_team.num_members == 11){
         // Si aquesta nova alineació té més punts que l'anterior amb més punts:
         if (selected_team.points > actual_max_points){ 
-            actual_max_points = selected_team.points;  // Actualitzem els actual_max points
-            write_solution(selected_team, output); // Escrivim l'alineació en el output
+            actual_max_points = selected_team.points;  // Actualitzem els actual_max_points
+            write_solution(selected_team, output); // Escrivim l'alineació 
         }
         return;
     }
 
-    // Si l'alineació que estem creant no excedeix el preu max de l'equip i tampoc cap jugador el preu individual:
+    // Si l'alineació compleix les condicions de l'input:
     if(accepted_player(selected_team, p, p.position_num())){
-        // Si hem triat un jugador:
-        selected_team.add_member(p, p.position_num());
-        tactica_exh(output, selected_team, id+1); // Cridem la funció recurssiva
-        
-        // Eliminem l'últim jugador actualitzant els paràmetres (per crear una nova combinació)
-        selected_team.remove_member(p, p.position_num());
+        selected_team.add_member(p, p.position_num()); 
+        tactica_exh(output, selected_team, id+1); 
+        selected_team.remove_member(p, p.position_num()); 
         }
 
     tactica_exh(output, selected_team, id+1);
@@ -132,10 +158,15 @@ int main(int argc, char** argv) {
         cout << "Entrada incorrecta. Es necessiten 3 arguments: <fitxer_jugadors> <fitxer_consulta> <fitxer_sortida>" << endl;
         exit(1);
     }
-
+     // Llegeix el fitxer_consulta
+    ifstream consulta(argv[2]);
+    consulta >> nDef >> nMig >> nDav >> maxTotalPrice >> maxIndivPrice;
+    consulta.close();
+    
     // Llegim les dades dels jugadors
     ifstream jugadors(argv[1]);
     int nextId = 0;
+
     while (!jugadors.eof()) {
         string name, club, position;
         int p;
@@ -147,26 +178,25 @@ int main(int argc, char** argv) {
         jugadors >> p;
         string aux2;
         getline(jugadors,aux2);
-        players.push_back(Player(nextId++, name, position, price, club, p));
+        if(price <= maxIndivPrice){
+            Player player = Player(nextId++, name, position, price, club, p);
+            max_punts_pos(player); // Calcula el max de punts que podem obtenir de cada posició
+            players.push_back(player);
+        }
     }
-
+    
     jugadors.close();
-
-    // Llegim fitxer_consulta
-    ifstream consulta(argv[2]);
-    consulta >> nDef >> nMig >> nDav >> maxTotalPrice >> maxIndivPrice;
-    consulta.close();
 
     num_pl_position = {1, nDef, nMig, nDav};
 
-    // Inicialitzem el cronòmetre
+    // Inicialitza el cronòmetre
     t_start = clock();
 
-    // Inicialitzem els actuals punts a 0 i el equip buit
+    // Inicialitza els actuals punts a 0 i l'equip buit
     actual_max_points = 0;
     Team selected_team = Team();
 
-    // Cridem la cerca exhaustiva
+    // Crida la cerca exhaustiva
     tactica_exh(argv[3], selected_team, 0);
 
     cout << "Exhaustive finished" << endl;
