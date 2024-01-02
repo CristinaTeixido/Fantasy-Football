@@ -20,7 +20,7 @@ class Player {
     Player(int ident, const string& n, const string& pos, int pr, const string& c, int p):
         id(ident), name(n), position(pos), price(pr), club(c), points(p){};
 
-    int position_num(){ // Retorna 0, 1 o 2 segons la posició del jugador
+    int position_num(){ // Retorna 0, 1 , 2 o 3 segons la posició del jugador
         if (position == "por") return 0;    
         if (position == "def") return 1;
         if (position == "mig") return 2;
@@ -63,7 +63,7 @@ int nDef, nMig, nDav;
 int maxTotalPrice, maxIndivPrice; 
 int actual_max_points, t_start;
 vector<Player> players;
-vector<int> num_pl_position;
+vector<int> num_pl_position;        / nombre de jugadors de cada categoria segons la consulta det
 vector<int> max_points(4, 0);
 
 
@@ -71,10 +71,12 @@ void max_punts_pos(Player& p){
     if(p.points > max_points[p.position_num()]) max_points[p.position_num()] = p.points;
 }
 
-/* Per cada posició buida de l'equip que tenim fins ara sumem als punts de l'equip
-els punts del millor jugador d'aquella posició. 
-Retornarà false si la suma és inferior que el maxim de punts que tenim fins ara,
-sinó retornarà true*/
+
+/* Donada la suma parcial del preu d'un equip en construcció,
+retorna true si utilitzant els hipòtetics millors jugadors de cada posició la suma de punts de l'equip sobrepassa,
+la millor puntuació trobada fins el moment.
+En canvi, retorna fals si l'alineació que s'està construint, no arriba a la millor puntuació ni amb els 
+millors jugadors de cada categoria. */
 
 bool future(Team& selected_team){
     int points = selected_team.points;
@@ -162,6 +164,8 @@ int main(int argc, char** argv) {
     ifstream consulta(argv[2]);
     consulta >> nDef >> nMig >> nDav >> maxTotalPrice >> maxIndivPrice;
     consulta.close();
+
+    num_pl_position = {1, nDef, nMig, nDav};
     
     // Llegim les dades dels jugadors
     ifstream jugadors(argv[1]);
@@ -186,8 +190,6 @@ int main(int argc, char** argv) {
     }
     
     jugadors.close();
-
-    num_pl_position = {1, nDef, nMig, nDav};
 
     // Inicialitza el cronòmetre
     t_start = clock();
