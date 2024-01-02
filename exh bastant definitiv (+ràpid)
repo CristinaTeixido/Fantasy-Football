@@ -59,11 +59,10 @@ class Team {
 
 
 // Declarem variables globals 
-int nDef, nMig, nDav;
 int maxTotalPrice, maxIndivPrice; 
 int actual_max_points, t_start;
 vector<Player> players;
-vector<int> num_pl_position;        / nombre de jugadors de cada categoria segons la consulta det
+vector<int> num_pl_position = {1, 0, 0, 0};       // nombre de jugadors de cada categoria segons la consulta det
 vector<int> max_points(4, 0);
 
 
@@ -80,10 +79,7 @@ millors jugadors de cada categoria. */
 
 bool future(Team& selected_team){
     int points = selected_team.points;
-    points += (1 - selected_team.members[0].size()) * max_points[0] + 
-              (nDef - selected_team.members[1].size()) * max_points[1] +
-              (nMig - selected_team.members[2].size()) * max_points[2] +
-              (nDav - selected_team.members[3].size()) * max_points[3];
+    for(int i = 0; i < 4; i++) points += (num_pl_position[i] - selected_team.members[i].size()) * max_points[i];
     if(points <= actual_max_points) return false;
     return true;
 }
@@ -161,11 +157,10 @@ int main(int argc, char** argv) {
         exit(1);
     }
      // Llegeix el fitxer_consulta
-    ifstream consulta(argv[2]);
-    consulta >> nDef >> nMig >> nDav >> maxTotalPrice >> maxIndivPrice;
-    consulta.close();
 
-    num_pl_position = {1, nDef, nMig, nDav};
+    ifstream consulta(argv[2]);
+    consulta >> num_pl_position[1] >> num_pl_position[2] >> num_pl_position[3] >> maxTotalPrice >> maxIndivPrice;
+    consulta.close();
     
     // Llegim les dades dels jugadors
     ifstream jugadors(argv[1]);
