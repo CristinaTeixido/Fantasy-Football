@@ -125,7 +125,7 @@ bool repeated_player(const Team& team, const Player& pl, int g){
 }
 
 
-// Retorna true si s'ha pogut canviar el jugador oldP per el newP a l'equip
+// Retorna true si s'ha pogut canviar el jugador oldP pel newP a l'equip
 bool exchangePlayer (int pos, int jugador, Player& newP, Player& oldP, Team& equip){
     if(repeated_player(equip, newP, pos)) return false;
     equip.price += (newP.price - oldP.price);
