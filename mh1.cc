@@ -30,6 +30,7 @@ class Player {
         return (name != b.name);
     }
 
+// Retorna un nombre del 0 al 3 associat a la posició del jugador
     int position_num(){
         if (position == "por") return 0;    
         if (position == "def") return 1;
@@ -62,6 +63,7 @@ class Team {
         return true;
     }
 
+// Afegeix un jugador a l'equip
     void add_member(Player p, int g){
         members[g].push_back(p);
         price += p.price;
@@ -91,30 +93,30 @@ class Team {
 
 
 // Declarem variables globals 
-int nDef, nMig, nDav;
 int maxTotalPrice, maxIndivPrice; 
 int actual_max_points, t_start;
 string output;
 
 vector<Player> players;
-vector<vector<Player>> players_by_position;
-vector<vector<Player>> fake_players;
+vector<vector<Player>> players_by_position = {0,0,0,0};
+vector<vector<Player>> fake_players = {0,0,0,0};
 
-vector<int> num_pl_position;
+vector<int> num_pl_position = {1, 0, 0, 0};	// vector amb el nombre de jugadors necessaris per cada posició, segons consulta
 
-
+// Retorna un nombre aleatori del 0 a b
 int randInt(int b){
     assert(b >= 0);
     if(b == 0) return 0;
     return rand() % (b+1);
 }
 
-//jugador de l'equip
+//Retorna un jugador determinat d'un equip
 Player getPlayer(const Team& equip, int pos, int jugador) {
     if (pos == 0) return equip.members[0][0];
     return equip.members[pos][jugador];
 }
 
+// Retorna true si un jugador ja està a l'equip i false en cas contrari.
 bool repeated_player(const Team& team, const Player& pl, int g){
     for(uint i = 0; i< team.members[g].size(); ++i){
         if (team.members[g][i].name == pl.name) return true;
@@ -132,7 +134,7 @@ bool exchangePlayer (int pos, int jugador, Player& newP, Player& oldP, Team& equ
     
 }
 
-
+// Retorna true si al afegir un jugador a un equip, es seguirien complint les condicions establertes 
 bool accepted_player(Team& team, Player& pl, int g, bool repeated){
     if (pl.price > maxIndivPrice) return false;
     //if (pl.price + team.price > maxTotalPrice) return false;
@@ -143,18 +145,19 @@ bool accepted_player(Team& team, Player& pl, int g, bool repeated){
 
 
 
-//jugador random
+//Retorna un jugador aleatori d'una posició determinada
+// En cas que no trobi cap jugador que compleixi les condicions necessàries, retorna un jugador fake no utilitzat en l'equip.
 Player randPlayer(Team& team, int g){
     int n = players_by_position[g].size();
     Player pl = players_by_position[g][randInt(n-1)];
     int tries = 0;
-    while(!accepted_player(team, pl, g, true)){
+    while(!accepted_player(team, pl, g, true)){		// intenta 200 cops trobar un jugador random que s'accepti a l'equip 
         if (tries < 200){
             pl = players_by_position[g][randInt(n-1)];
             ++tries;
         }
 
-        else{
+        else{						// si no ho aconsegueix, afegeix un jugador fake
             int n = fake_players[g].size();
             for(int k = 0; k < n; ++k){
                 pl = fake_players[g][k];
