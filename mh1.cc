@@ -170,12 +170,13 @@ Player randPlayer(Team& team, int g){
 }
 
 
+// Retorna true si el jugador determinat és fake, i false en cas contrari.
 bool fake_player(string name){
     if (name.substr(0,4) == "Fake") return true;
     return false;
 }
 
-
+// Escriu una solució determinada al fitxer de sortida 
 void write_solution(Team& selected_team){
     ofstream fout(output);   
 
@@ -191,7 +192,8 @@ void write_solution(Team& selected_team){
 
 }
 
-
+// Retorna una llista de 400 equips que siguin veïns de l'equip seleccionat.
+// Dos equips són veïnis si tenen tots els jugadors iguals, excepte d'un.
 vector<Team> get_neighbors(Team& solution){ 
     vector<Team> neighbours;   
 	for (int i = 0; i < 400; ++i){       
@@ -213,7 +215,9 @@ vector<Team> get_neighbors(Team& solution){
 }
 
          
-// Algoritme Tabu Search
+// Algorisme de Tabu Search a partir de la solució inicial del greedy
+// Cerca veïns de la solució actual fins que es superen el nombre d'iteracions o
+// es troba una solució que ja hem cercat anteriorment (està a la Tabu search), per evitar cicles.
 void tabu_search(Team& initial_solution, int max_iterations, int max_size){
 	Team best_solution = initial_solution;
 	Team current_solution = initial_solution;
@@ -225,33 +229,35 @@ void tabu_search(Team& initial_solution, int max_iterations, int max_size){
 		int actual_max_points = 0;
 
 		for (Team& neighbor: neighbors) {
-            if (find(tabu_list.begin(), tabu_list.end(), neighbor) == tabu_list.end()) {
-                if (neighbor.points >= actual_max_points) {
-                    best_neighbor = neighbor;
-                    actual_max_points = neighbor.points;
-                }
-            }
+			// busca el millor veí
+	            if (find(tabu_list.begin(), tabu_list.end(), neighbor) == tabu_list.end()) {
+	                if (neighbor.points >= actual_max_points) {
+	                    best_neighbor = neighbor;
+	                    actual_max_points = neighbor.points;
+	                }
+            	}
 		}
 
 		if (best_neighbor.num_members == 0) break;
 
 		current_solution = best_neighbor;
         
-        if (int(tabu_list.size()) > max_size) tabu_list.erase(tabu_list.begin());
-        tabu_list.push_back(best_neighbor);
+	        if (int(tabu_list.size()) > max_size) tabu_list.erase(tabu_list.begin());
+	        tabu_list.push_back(best_neighbor);
+
+		// Si és millor que la solució actual, establim aquesta com a millor
 		if (best_neighbor.points > best_solution.points) {
-            best_solution = best_neighbor;
-            write_solution(best_solution);
-
-	    }
-
+		    best_solution = best_neighbor;
+		    write_solution(best_solution);
+	
+		}
     }
 
     cout << "metaheuristic terminated" << endl;
 
 }
 
-
+// Establim el primer equip amb una tàctica greedy basada en agafar els possibles jugadors amb millor rendiment (punts/log(preu))
 void tactica_greedy(Team& selected_team){
     int pl = 0;
     while(pl < int(players.size()) && selected_team.num_members < 11){
@@ -268,15 +274,18 @@ void tactica_greedy(Team& selected_team){
     
     cout << "greedy terminated" << endl;
     cout << selected_team.points << endl;
+
+	// Un cop tenim un equip seleccionat, apliquem la metaheurística determinada començant per aquesta solució.
     tabu_search(selected_team, 10000, 100);
 }
 
-
+// Afegeix un jugador determinat a una llista de jugadors
 void add_player_list(vector<vector<Player>>& lists, Player p){
     lists[p.position_num()].push_back(p);
 }
 
 
+// Llegeix el fitxer d'entrada
 void read(int argc, char** argv){
     // Llegeix les dades dels jugadors
     ifstream jugadors(argv[1]);
@@ -309,7 +318,7 @@ void read(int argc, char** argv){
 
     // Llegeix fitxer_consulta
     ifstream consulta(argv[2]);
-    consulta >> nDef >> nMig >> nDav >> maxTotalPrice >> maxIndivPrice;
+    consulta >> num_pl_position[1] >> num_pl_position[2] >> num_pl_position[3] >> maxTotalPrice >> maxIndivPrice;
     consulta.close();
 }
 
@@ -320,10 +329,6 @@ int main(int argc, char** argv) {
         cout << "Entrada incorrecta. Es necessiten 3 arguments: <fitxer_jugadors> <fitxer_consulta> <fitxer_sortida>" << endl;
         exit(1);
     }
-
-    players_by_position = {{},{},{},{}};
-    fake_players= {{},{},{},{}};
-
 
     read(argc, argv);
 
