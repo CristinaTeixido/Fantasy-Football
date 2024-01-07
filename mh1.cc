@@ -110,7 +110,7 @@ int randInt(int b){
     return rand() % (b+1);
 }
 
-//Retorna un jugador determinat d'un equip
+//Retorna un jugador random (pos i jugador són randoms) de l'equip
 Player getPlayer(const Team& equip, int pos, int jugador) {
     if (pos == 0) return equip.members[0][0];
     return equip.members[pos][jugador];
@@ -125,6 +125,7 @@ bool repeated_player(const Team& team, const Player& pl, int g){
 }
 
 
+// Retorna true si s'ha pogut canviar el jugador oldP per el newP a l'equip
 bool exchangePlayer (int pos, int jugador, Player& newP, Player& oldP, Team& equip){
     if(repeated_player(equip, newP, pos)) return false;
     equip.price += (newP.price - oldP.price);
