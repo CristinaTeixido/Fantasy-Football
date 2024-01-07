@@ -98,8 +98,8 @@ int actual_max_points, t_start;
 string output;
 
 vector<Player> players;
-vector<vector<Player>> players_by_position = {0,0,0,0};
-vector<vector<Player>> fake_players = {0,0,0,0};
+vector<vector<Player>> players_by_position = {{},{},{},{}};
+vector<vector<Player>> fake_players = {{},{},{},{}};
 
 vector<int> num_pl_position = {1, 0, 0, 0};	// vector amb el nombre de jugadors necessaris per cada posició, segons consulta
 
@@ -343,7 +343,6 @@ int main(int argc, char** argv) {
 
     // Inicialitzem l'equip
     Team selected_team = Team();
-    num_pl_position = {1, nDef, nMig, nDav};
     output = argv[3];
 
     tactica_greedy(selected_team); 
